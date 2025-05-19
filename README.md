@@ -4,6 +4,14 @@
 
 This project creates a backend application using Node.js with Express.js framework to provide API endpoint for flight plan information
 
+## Required environment variables
+
+API_URL: URL prefix for sending request
+
+API_KEY: Required key for sending request to the API URL
+
+PORT: Port that the application will run in
+
 # Endpoints
 
 ## /api/flightplan/list
