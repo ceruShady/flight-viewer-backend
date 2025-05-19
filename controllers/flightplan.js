@@ -3,12 +3,6 @@ const axios = require("axios");
 const API_KEY = process.env.API_KEY;
 const API_URL = process.env.API_URL;
 
-//Require current page (optional)
-// Need to return total amount of flights and current page
-// Optional query:
-// - search term: String (Default "")
-// - page: Number (Default 1)
-// - perpage: Number (Default 10)
 exports.getFlights = async (req, res) => {
   let searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -54,27 +48,20 @@ exports.getFlights = async (req, res) => {
 exports.getFlightPlan = async (req, res) => {
   const flightId = req.params.fid;
 
-  // Get all flight plan
   const flightResponse = await axios.get(
-    "https://api.swimapisg.info/flight-manager/displayAll",
+    `${API_URL}/flight-manager/displayAll`,
     { headers: { apikey: API_KEY } }
   );
 
-  // find first matching _id in the list
   const flightPlan = flightResponse.data.find((flight) => {
     return flight._id === flightId;
   });
 
-  // Error handling: Flight not found
   if (!flightPlan) {
     console.error("Flight plan not found");
   }
-  console.log(flightPlan);
 
-  // Prep array of designated point array from the flight plan
   const designatedArr = [];
-
-  // Need to account for cases with no designated point
 
   flightPlan.filedRoute.routeElement.forEach((routeEle) => {
     if (routeEle.position?.designatedPoint)
@@ -84,15 +71,9 @@ exports.getFlightPlan = async (req, res) => {
     }
   });
 
-  // res.json(designatedArr);
-
-  // Get all fixes
-  const fixesResponse = await axios.get(
-    "https://api.swimapisg.info/geopoints/list/fixes",
-    { headers: { apikey: API_KEY } }
-  );
-  // Get list of matching position designation point in the list of fixes
-  // Extract lat and lon to create an array of position object consisting of designation and position
+  const fixesResponse = await axios.get(`${API_URL}/geopoints/list/fixes`, {
+    headers: { apikey: API_KEY },
+  });
 
   const finalArr = [];
   let posStr;
@@ -115,5 +96,4 @@ exports.getFlightPlan = async (req, res) => {
   });
 
   res.status(200).json(finalArr);
-  // res.status(200).json(flightPlan);
 };
