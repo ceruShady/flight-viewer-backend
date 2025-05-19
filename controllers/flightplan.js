@@ -1,6 +1,7 @@
 const axios = require("axios");
 
 const API_KEY = process.env.API_KEY;
+const API_URL = process.env.API_URL;
 
 //Require current page (optional)
 // Need to return total amount of flights and current page
@@ -13,10 +14,9 @@ exports.getFlights = async (req, res) => {
   const page = Number(req.query.page) || 1;
   const perpage = Number(req.query.perpage) || 10;
 
-  const response = await axios.get(
-    "https://api.swimapisg.info/flight-manager/displayAll",
-    { headers: { apikey: API_KEY } }
-  );
+  const response = await axios.get(`${API_URL}/flight-manager/displayAll`, {
+    headers: { apikey: API_KEY },
+  });
 
   let fliteredPlans;
 
