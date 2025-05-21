@@ -3,16 +3,26 @@ const axios = require("axios");
 const API_KEY = process.env.API_KEY;
 const API_URL = process.env.API_URL;
 
-exports.getFlights = async (req, res) => {
+exports.getFlights = async (req, res, next) => {
   let searchTerm = req.query.search || "";
-  const page = Number(req.query.page) || 1;
+  let page = Number(req.query.page) || 1;
+  if (page < 1) page = 1;
+
   const perpage = Number(req.query.perpage) || 10;
 
-  const response = await axios.get(`${API_URL}/flight-manager/displayAll`, {
-    headers: { apikey: API_KEY },
-  });
-
+  let response;
   let fliteredPlans;
+
+  try {
+    response = await axios.get(`${API_URL}/flight-manager/displayAll`, {
+      headers: { apikey: API_KEY },
+    });
+  } catch (err) {
+    console.error("ERROR: " + err.message);
+    const error = new Error("Unable to get flight list");
+    error.statusCode = 404;
+    throw error;
+  }
 
   if (searchTerm) {
     searchTerm = searchTerm.toLowerCase();
@@ -22,6 +32,9 @@ exports.getFlights = async (req, res) => {
   } else {
     fliteredPlans = response.data;
   }
+
+  const totalPage = Math.ceil(fliteredPlans.length / perpage);
+  if (page > totalPage) page = totalPage;
 
   const startIndex = (page - 1) * perpage;
   const endIndex = page * perpage;
@@ -38,26 +51,42 @@ exports.getFlights = async (req, res) => {
 
   res.status(200).json({
     total_result: fliteredPlans.length,
-    totalPage: Math.ceil(fliteredPlans.length / perpage),
+    totalPage: totalPage,
     page: page,
     result: result,
   });
 };
 
-exports.getFlightPlan = async (req, res) => {
+exports.getFlightPlan = async (req, res, next) => {
   const flightId = req.params.fid;
 
-  const flightResponse = await axios.get(
-    `${API_URL}/flight-manager/displayAll`,
-    { headers: { apikey: API_KEY } }
-  );
+  let flightResponse;
+
+  try {
+    flightResponse = await axios.get(`${API_URL}/flight-manager/displayAll`, {
+      headers: { apikey: API_KEY },
+    });
+  } catch (err) {
+    console.error("ERROR: " + err.message);
+    const error = new Error("Unable to get flight plan");
+    error.statusCode = 404;
+    throw error;
+  }
 
   const flightPlan = flightResponse.data.find((flight) => {
     return flight._id === flightId;
   });
 
   if (!flightPlan) {
-    console.error("Flight plan not found");
+    const err = new Error("Flight plan not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!flightPlan.filedRoute) {
+    const err = new Error("Flight plan does not have a filed route");
+    err.statusCode = 404;
+    throw err;
   }
 
   const designatedArr = [];
@@ -66,13 +95,21 @@ exports.getFlightPlan = async (req, res) => {
     if (routeEle.position?.designatedPoint)
       designatedArr.push(routeEle.position.designatedPoint);
     else {
-      console.error("Route element does not have position property");
+      console.error("ERROR: Route element does not have position property");
     }
   });
 
-  const fixesResponse = await axios.get(`${API_URL}/geopoints/list/fixes`, {
-    headers: { apikey: API_KEY },
-  });
+  let fixesResponse;
+  try {
+    fixesResponse = await axios.get(`${API_URL}/geopoints/list/fixes`, {
+      headers: { apikey: API_KEY },
+    });
+  } catch (err) {
+    console.error("ERROR: " + err.message);
+    const error = new Error("Unable to get fixes data");
+    error.statusCode = 404;
+    throw error;
+  }
 
   const finalArr = [];
   let posStr;
@@ -90,7 +127,7 @@ exports.getFlightPlan = async (req, res) => {
         position: [Number(posArr[0]), Number(posArr[1])],
       });
     } else {
-      console.error(`Fix data: ${designated} not found`);
+      console.error(`ERROR: Fix data: ${designated} not found`);
     }
   });
 
