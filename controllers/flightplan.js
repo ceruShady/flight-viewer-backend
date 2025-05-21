@@ -35,7 +35,6 @@ exports.getFlights = async (req, res) => {
       departureTime: flightplan.departure.timeOfFlight,
     };
   });
-  console.log(result);
 
   res.status(200).json({
     total_result: fliteredPlans.length,
